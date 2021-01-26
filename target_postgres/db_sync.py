@@ -324,7 +324,7 @@ class DbSync:
         pg_table_name = table_name.replace('.', '_').replace('-', '_').lower()
 
         if is_temporary:
-            return 'tmp_{}'.format(str(uuid.uuid4()).replace('-', '_'))
+            return f'"{pg_table_name.lower()}_temporary"'
 
         if without_schema:
             return f'"{pg_table_name.lower()}"'
