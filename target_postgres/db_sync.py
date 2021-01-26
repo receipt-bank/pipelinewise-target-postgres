@@ -372,13 +372,19 @@ class DbSync:
                     ', '.join(self.column_names())
                 )
                 self.logger.debug(copy_sql)
+
                 with open(file, "rb") as f:
                     cur.copy_expert(copy_sql, f)
+
+                self.run_hook('before_run_sql', self.table_name(stream, False), cur)
+
                 if len(self.stream_schema_message['key_properties']) > 0:
                     cur.execute(self.update_from_temp_table(temp_table))
                     updates = cur.rowcount
                 cur.execute(self.insert_from_temp_table(temp_table))
                 inserts = cur.rowcount
+
+                self.run_hook('after_run_sql', self.table_name(stream, False), cur)
 
                 self.logger.info('Loading into %s: %s',
                                  self.table_name(stream, False),
@@ -592,3 +598,11 @@ class DbSync:
         else:
             self.logger.info("Table '%s' exists", table_name)
             self.update_columns()
+
+    def run_hook(self, hook_name, table_name, cursor):
+        if table_name not in self.connection_config.get(hook_name, {}):
+            return
+
+        hook_sql = self.connection_config[hook_name][table_name]
+        self.logger.info(f"Executing {hook_name} hook for table {table_name}: {hook_sql}")
+        cur.execute(hook_sql)
